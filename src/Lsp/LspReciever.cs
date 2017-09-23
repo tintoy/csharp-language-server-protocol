@@ -7,7 +7,7 @@ using Newtonsoft.Json.Linq;
 
 namespace Lsp
 {
-    class LspReciever : Reciever
+    class LspReciever : Receiver
     {
         private bool _initialized;
 

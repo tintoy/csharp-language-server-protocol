@@ -14,13 +14,13 @@ export function activate(context: ExtensionContext) {
     // The server is implemented in node
     let serverExe = context.asAbsolutePath('../sample/SampleServer/bin/Debug/netcoreapp1.1/win7-x64/SampleServer.exe');
     // The debug options for the server
-    let debugOptions = { execArgv: ["--nolazy", "--debug=6009"] };
+    let debugArgs = ["--nolazy", "--debug=6009"];
 
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used
     let serverOptions: ServerOptions = {
-        run : { command: serverExe },
-        debug: { command: serverExe, options: debugOptions }
+        run: { command: serverExe },
+        debug: { command: serverExe, args: debugArgs }
     }
 
     // Options to control the language client

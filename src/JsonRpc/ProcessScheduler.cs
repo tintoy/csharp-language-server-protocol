@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
+using Serilog;
 
 namespace JsonRpc
 {
@@ -42,7 +43,7 @@ namespace JsonRpc
             if (list.Count == 0) return list;
 
             var result = new List<Task>();
-            foreach(var t in list)
+            foreach (var t in list)
             {
                 if (t.IsFaulted)
                 {
@@ -50,6 +51,8 @@ namespace JsonRpc
                 }
                 else if (!t.IsCompleted)
                 {
+                    Log.Verbose("Process Task {TaskId} is complete.", t.Id);
+
                     result.Add(t);
                 }
             }
@@ -70,19 +73,46 @@ namespace JsonRpc
                     if (_queue.TryTake(out var item, Timeout.Infinite, token))
                     {
                         var (type, request) = item;
-                        if (type == RequestProcessType.Serial)
+                        try
                         {
-                            Task.WaitAll(waitables.ToArray(), token);
-                            Start(request).Wait(token);
+                            Log.Verbose("Processing scheduled {ProcessType} item...", type);
+                            if (type == RequestProcessType.Serial)
+                            {
+                                Log.Verbose("Waiting for {ExistingProcessCount} existing processes to complete before starting Serial process...", waitables.Count);
+                                Task[] currentWaitables = waitables.ToArray();
+                                Task.WaitAll(currentWaitables, token);
+                                Log.Verbose("{ExistingProcessCount} existing processes have completed; starting Serial process...", currentWaitables.Length);
+
+                                Start(request).Wait(token);
+                                Log.Verbose("Serial process completed.");
+                            }
+                            else if (type == RequestProcessType.Parallel)
+                            {
+                                Log.Verbose("Starting Parallel process...");
+
+                                waitables.Add(Start(request));
+
+                                Log.Verbose("Started Parallel process (there are now {ExistingProcessCount} processes running).", waitables.Count);
+                            }
+                            else
+                                throw new NotImplementedException("Only Serial and Parallel execution types can be handled currently");
+
+                            waitables = RemoveCompleteTasks(waitables);
+                            Interlocked.Exchange(ref _TestOnly_NonCompleteTaskCount, waitables.Count);
                         }
-                        else if (type == RequestProcessType.Parallel)
+                        catch (AggregateException processRequestError)
                         {
-                            waitables.Add(Start(request));
+                            foreach (Exception exception in processRequestError.Flatten().InnerExceptions)
+                                Log.Error(exception, "Error processing {RequestType} request: {ErrorMessage}", type, exception.Message);
+
+                            throw;
                         }
-                        else
-                            throw new NotImplementedException("Only Serial and Parallel execution types can be handled currently");
-                        waitables = RemoveCompleteTasks(waitables);
-                        Interlocked.Exchange(ref _TestOnly_NonCompleteTaskCount, waitables.Count);
+                        catch (Exception processRequestError)
+                        {
+                            Log.Error(processRequestError, "Error processing {RequestType} request: {ErrorMessage}", type, processRequestError.Message);
+
+                            throw;
+                        }
                     }
                 }
             }
@@ -94,8 +124,7 @@ namespace JsonRpc
                 Task.WaitAll(waitables.ToArray(), TimeSpan.FromMilliseconds(1000));
                 var keeponrunning = RemoveCompleteTasks(waitables);
                 Interlocked.Exchange(ref _TestOnly_NonCompleteTaskCount, keeponrunning.Count);
-                keeponrunning.ForEach((t) =>
-                {
+                keeponrunning.ForEach((t) => {
                     // TODO: There is no way to abort a Task. As we don't construct the tasks, we can do nothing here
                     // Option is: change the task factory "Func<Task> request" to a "Func<CancellationToken, Task> request"
                 });

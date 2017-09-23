@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -89,7 +89,7 @@ namespace Lsp
             await DynamicallyRegisterHandlers();
         }
 
-        async Task<InitializeResult> IRequestHandler<InitializeParams, InitializeResult>.Handle(InitializeParams request, CancellationToken token)
+        Task<InitializeResult> IRequestHandler<InitializeParams, InitializeResult>.Handle(InitializeParams request, CancellationToken token)
         {
             Client = request;
 
@@ -161,7 +161,7 @@ namespace Lsp
                 _initializeComplete.SetResult(result);
             }
 
-            return result;
+            return Task.FromResult(result);
         }
 
         public Task Handle()
@@ -212,6 +212,9 @@ namespace Lsp
             {
                 registrations.Add(handler.Registration);
             }
+
+            if (registrations.Count == 0)
+                return; // Client does not support dynamic registrations.
 
             var @params = new RegistrationParams() { Registrations = registrations };
 

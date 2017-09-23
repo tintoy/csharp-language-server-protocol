@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -44,20 +44,26 @@ namespace JsonRpc
 
             _scheduler = new ProcessScheduler();
             _inputThread = new Thread(ProcessInputStream) { IsBackground = true, Name = "ProcessInputStream" };
-            }
+        }
+
+        Serilog.ILogger Log { get; } = Serilog.Log.ForContext<InputHandler>();
 
         public void Start()
         {
+            Log.Verbose("Starting input handler...");
+
             _outputHandler.Start();
             _inputThread.Start();
             _scheduler.Start();
+
+            Log.Verbose("Started input handler.");
         }
 
         // don't be async: We already allocated a seperate thread for this.
         private void ProcessInputStream()
         {
             // some time to attach a debugger
-            // System.Threading.Thread.Sleep(TimeSpan.FromSeconds(5)); 
+            //System.Threading.Thread.Sleep(TimeSpan.FromSeconds(5));
 
             // header is encoded in ASCII
             // "Content-Length: 0" counts bytes for the following content
@@ -66,19 +72,39 @@ namespace JsonRpc
             {
                 if (_inputThread == null) return;
 
+                Log.Verbose("Starting read from input stream...");
+
                 var buffer = new byte[300];
                 var current = _input.Read(buffer, 0, MinBuffer);
-                if (current == 0) return; // no more _input
+
+                Log.Verbose("Read {ByteCount} bytes from input stream.", current);
+
+                if (current == 0)
+                {
+                    Log.Warning("ProcessInputStream: Current = 0");
+
+                    Thread.Sleep(1000);
+
+                    continue;
+                }
+
                 while (current < MinBuffer || 
                        buffer[current - 4] != CR || buffer[current - 3] != LF ||
                        buffer[current - 2] != CR || buffer[current - 1] != LF)
                 {
+                    Log.Verbose("Reading additional data from input stream...");
+
                     var n = _input.Read(buffer, current, 1);
                     if (n == 0) return; // no more _input, mitigates endless loop here.
+
+                    Log.Verbose("Read {ByteCount} bytes of additional data from input stream.", n);
+
                     current += n;
                 }
 
                 var headersContent = System.Text.Encoding.ASCII.GetString(buffer, 0, current);
+                Log.Verbose("Got raw headers: {Headers}", headersContent);
+
                 var headers = headersContent.Split(HeaderKeys, StringSplitOptions.RemoveEmptyEntries);
                 long length = 0;
                 for (var i = 1; i < headers.Length; i += 2)
@@ -93,22 +119,46 @@ namespace JsonRpc
                     }
                 }
 
+                Log.Verbose("Parsed headers (ContentLength = {ContentLength}).", length);
+
                 if (length == 0 || length >= int.MaxValue)
                 {
+                    Log.Verbose("Invalid content length; treating incoming request as an empty request.");
+
                     HandleRequest(string.Empty);
                 }
                 else
                 {
+                    Log.Verbose("Reading incoming request body ({ContentLength} bytes expected)...", length);
+
                     var requestBuffer = new byte[length];
                     var received = 0;
                     while (received < length)
                     {
+                        Log.Verbose("Reading segment of incoming request body ({ReceivedByteCount} of {TotalByteCount} bytes so far)...", received, length);
+
                         var n = _input.Read(requestBuffer, received, requestBuffer.Length - received);
-                        if (n == 0) return; // no more _input
+                        while (n == 0 && received < length)
+                        {
+                            Log.Warning("Pausing while reading incoming request body (no_more_input after {ByteCount} bytes)...", received);
+
+                            Thread.Sleep(1500);
+
+                            n = _input.Read(requestBuffer, received, requestBuffer.Length - received);
+                        }
+
+                        Log.Verbose("Read segment of incoming request body ({ReceivedByteCount} of {TotalByteCount} bytes so far).", received, length);
+
                         received += n;
                     }
+
+                    Log.Verbose("Received entire payload ({ReceivedByteCount} bytes).", received);
+
                     // TODO sometimes: encoding should be based on the respective header (including the wrong "utf8" value)
-                    var payload = System.Text.Encoding.UTF8.GetString(requestBuffer); 
+                    var payload = System.Text.Encoding.UTF8.GetString(requestBuffer);
+
+                    Log.Verbose("Read incoming request body ({ContentLength} bytes, total): {RequestBody}.", received, payload);
+
                     HandleRequest(payload);
                 }
             }
@@ -116,19 +166,25 @@ namespace JsonRpc
 
         private void HandleRequest(string request)
         {
+            Log.Verbose("Handle request {RequestBody}", request);
+
             JToken payload;
             try
             {
                 payload = JToken.Parse(request);
             }
-            catch
+            catch (Exception parseError)
             {
+                Log.Error(parseError, "Failed to parse request {RequestBody}", request);
+
                 _outputHandler.Send(new ParseError());
                 return;
             }
 
             if (!_reciever.IsValid(payload))
             {
+                Log.Error("Request {RequestBody} is invalid.", request);
+
                 _outputHandler.Send(new InvalidRequest());
                 return;
             }
@@ -136,8 +192,12 @@ namespace JsonRpc
             var (requests, hasResponse) = _reciever.GetRequests(payload);
             if (hasResponse)
             {
+                Log.Verbose("Payload has one or more responses.");
+
                 foreach (var response in requests.Where(x => x.IsResponse).Select(x => x.Response))
                 {
+                    Log.Verbose("Payload has response {@Response}.", response);
+
                     var id = response.Id is string s ? long.Parse(s) : response.Id is long l ? l : -1;
                     if (id < 0) continue;
 
@@ -161,6 +221,8 @@ namespace JsonRpc
             {
                 if (item.IsRequest)
                 {
+                    Log.Verbose("Schedule {RequestMethod} request {RequestId}.", item.Request.Method, item.Request.Id);
+
                     _scheduler.Add(
                         type,
                         async () => {
@@ -171,6 +233,8 @@ namespace JsonRpc
                 }
                 else if (item.IsNotification)
                 {
+                    Log.Verbose("Schedule {NotificationMethod} notification.", item.Notification.Method);
+
                     _scheduler.Add(
                         type,
                         () => {
@@ -181,6 +245,8 @@ namespace JsonRpc
                 }
                 else if (item.IsError)
                 {
+                    Log.Verbose("Schedule error {@ErrorMessage}.", item.Error.Message);
+
                     // TODO:
                     _outputHandler.Send(item.Error);
                 }

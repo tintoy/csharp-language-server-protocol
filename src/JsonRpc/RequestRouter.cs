@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using JsonRpc.Server;
 using JsonRpc.Server.Messages;
+using Serilog;
 
 namespace JsonRpc
 {
@@ -24,18 +25,31 @@ namespace JsonRpc
         public async void RouteNotification(Notification notification)
         {
             var handler = _collection.Get(notification.Method);
+            if (handler == null)
+            {
+                Log.Verbose("No handler registered for notification {NotificationMethod}.", notification.Method);
 
-            Task result;
-            if (handler.Params is null)
-            {
-                result = ReflectionRequestHandlers.HandleNotification(handler);
+                return;
             }
-            else
+
+            try
             {
-                var @params = notification.Params.ToObject(handler.Params);
-                result = ReflectionRequestHandlers.HandleNotification(handler, @params);
+                Task result;
+                if (handler.Params is null)
+                {
+                    result = ReflectionRequestHandlers.HandleNotification(handler);
+                }
+                else
+                {
+                    var @params = notification.Params.ToObject(handler.Params);
+                    result = ReflectionRequestHandlers.HandleNotification(handler, @params);
+                }
+                await result.ConfigureAwait(false);
             }
-            await result.ConfigureAwait(false);
+            catch (Exception handlerError)
+            {
+                Log.Error(handlerError, "Unexpected error while handling {NotificationMethod} notification.", notification.Method);
+            }
         }
 
 
@@ -51,42 +65,53 @@ namespace JsonRpc
             var method = _collection.Get(request.Method);
             if (method is null)
             {
+                Log.Verbose("No handler registered for {RequestMethod} request {RequestId}.", request.Method, request.Id);
+
                 return new MethodNotFound(request.Id);
             }
 
-            Task result;
-            if (method.Params is null)
+            try
             {
-                result = ReflectionRequestHandlers.HandleRequest(handler, token);
-            }
-            else
-            {
-                object @params;
-                try
+                Task result;
+                if (method.Params is null)
                 {
-                    @params = request.Params.ToObject(method.Params);
+                    result = ReflectionRequestHandlers.HandleRequest(handler, token);
                 }
-                catch
+                else
                 {
-                    return new InvalidParams(request.Id);
+                    object @params;
+                    try
+                    {
+                        @params = request.Params.ToObject(method.Params);
+                    }
+                    catch
+                    {
+                        return new InvalidParams(request.Id);
+                    }
+
+                    result = ReflectionRequestHandlers.HandleRequest(handler, @params, token);
                 }
 
-                result = ReflectionRequestHandlers.HandleRequest(handler, @params, token);
+                await result.ConfigureAwait(false);
+
+                object responseValue = null;
+                if (result.GetType().GetTypeInfo().IsGenericType)
+                {
+                    var property = typeof(Task<>)
+                        .MakeGenericType(result.GetType().GetTypeInfo().GetGenericArguments()[0]).GetTypeInfo()
+                        .GetProperty(nameof(Task<object>.Result), BindingFlags.Public | BindingFlags.Instance);
+
+                    responseValue = property.GetValue(result);
+                }
+
+                return new Client.Response(request.Id, responseValue);
             }
-
-            await result.ConfigureAwait(false);
-
-            object responseValue = null;
-            if (result.GetType().GetTypeInfo().IsGenericType)
+            catch (Exception handlerError)
             {
-                var property = typeof(Task<>)
-                    .MakeGenericType(result.GetType().GetTypeInfo().GetGenericArguments()[0]).GetTypeInfo()
-                    .GetProperty(nameof(Task<object>.Result), BindingFlags.Public | BindingFlags.Instance);
+                Log.Error(handlerError, "Unexpected error while handling {RequestMethod} request {RequestId}.", request.Method, request.Id);
 
-                responseValue = property.GetValue(result);
+                throw;
             }
-
-            return new Client.Response(request.Id, responseValue);
         }
     }
 }

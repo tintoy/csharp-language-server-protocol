@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -39,8 +39,12 @@ namespace JsonRpc
 
         public void Open()
         {
+            Serilog.Log.Verbose("Opening LSP connection...");
+
             // TODO: Throw if called twice?
             _inputHandler.Start();
+
+            Serilog.Log.Verbose("LSP connection is open.");
         }
 
         public void Dispose()

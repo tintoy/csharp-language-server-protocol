@@ -1,4 +1,4 @@
-﻿using JsonRpc;
+using JsonRpc;
 
 // ReSharper disable CheckNamespace
 

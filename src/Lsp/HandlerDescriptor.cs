@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Reflection;
 using JsonRpc;
 using Lsp.Capabilities.Client;
@@ -12,6 +12,9 @@ namespace Lsp
 
         public HandlerDescriptor(string method, IJsonRpcHandler handler, Type handlerType, Type @params, Type registrationType, Type capabilityType, Action disposeAction)
         {
+            if (method == null)
+                throw new ArgumentNullException(nameof(method));
+
             _disposeAction = disposeAction;
             Handler = handler;
             Method = method;
@@ -93,14 +96,14 @@ namespace Lsp
         {
             if (obj is HandlerDescriptor handler)
             {
-                return handler.HandlerType == HandlerType;
+                return handler.Method == Method;
             }
             return false;
         }
 
         public override int GetHashCode()
         {
-            return HandlerType.GetHashCode();
+            return Method.GetHashCode();
         }
     }
 }

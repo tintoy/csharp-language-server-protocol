@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.CodeDom;
 using System.Collections;
 using System.Collections.Generic;
@@ -71,7 +71,13 @@ namespace Lsp
             return _handlers.Where(instance => instance.Method == method);
         }
 
-        private static readonly Type[] HandlerTypes = { typeof(INotificationHandler), typeof(INotificationHandler<>), typeof(IRequestHandler<>), typeof(IRequestHandler<,>), };
+        private static readonly HashSet<Type> HandlerTypes = new HashSet<Type>
+        {
+            typeof(INotificationHandler),
+            typeof(INotificationHandler<>),
+            typeof(IRequestHandler<>),
+            typeof(IRequestHandler<,>)
+        };
 
         private bool IsValidInterface(Type type)
         {

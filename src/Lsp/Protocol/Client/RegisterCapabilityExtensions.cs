@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using JsonRpc;
 using Lsp.Models;
@@ -14,7 +14,7 @@ namespace Lsp.Protocol
             {
                 await mediator.SendRequest("client/registerCapability", @params);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 // VsCode today does not implement LSP properly.
                 await mediator.SendRequest("client/registerFeature", @params);
