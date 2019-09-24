@@ -89,7 +89,7 @@ namespace OmniSharp.Extensions.LanguageServerProtocol.Client.Tests
                 });
             });
 
-            var hover = await LanguageClient.TextDocument.Hover(AbsoluteDocumentPath, line, column);
+            var hover = await LanguageClient.TextDocument().Hover(AbsoluteDocumentPath, line, column);
 
             Assert.NotNull(hover.Range);
             Assert.NotNull(hover.Range.Start);
@@ -165,7 +165,7 @@ namespace OmniSharp.Extensions.LanguageServerProtocol.Client.Tests
                 ));
             });
 
-            var actualCompletions = await LanguageClient.TextDocument.Completions(AbsoluteDocumentPath, line, column);
+            var actualCompletions = await LanguageClient.TextDocument().Completions(AbsoluteDocumentPath, line, column);
 
             Assert.True(actualCompletions.IsIncomplete, "completions.IsIncomplete");
             Assert.NotNull(actualCompletions.Items);
@@ -229,7 +229,7 @@ namespace OmniSharp.Extensions.LanguageServerProtocol.Client.Tests
 
             Uri actualDocumentUri = null;
             List<Diagnostic> actualDiagnostics = null;
-            LanguageClient.TextDocument.OnPublishDiagnostics((documentUri, diagnostics) =>
+            LanguageClient.TextDocument().OnPublishDiagnostics((documentUri, diagnostics) =>
             {
                 actualDocumentUri = documentUri;
                 actualDiagnostics = diagnostics;

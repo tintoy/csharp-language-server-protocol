@@ -9,6 +9,7 @@ namespace OmniSharp.Extensions.LanguageServer.Client.Clients
     ///     Client for the LSP Text Document API.
     /// </summary>
     public partial class TextDocumentClient
+        : LspClientBase
     {
         /// <summary>
         ///     Create a new <see cref="TextDocumentClient"/>.
@@ -17,17 +18,9 @@ namespace OmniSharp.Extensions.LanguageServer.Client.Clients
         ///     The language client providing the API.
         /// </param>
         public TextDocumentClient(LanguageClient client)
+            : base(client)
         {
-            if (client == null)
-                throw new ArgumentNullException(nameof(client));
-
-            Client = client;
         }
-
-        /// <summary>
-        ///     The language client providing the API.
-        /// </summary>
-        public LanguageClient Client { get; }
 
         /// <summary>
         ///     Make a request to the server for the specified document position.

@@ -1,9 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using OmniSharp.Extensions.JsonRpc;
 using OmniSharp.Extensions.LanguageServer.Client.Clients;
 using OmniSharp.Extensions.LanguageServer.Client.Dispatcher;
 using OmniSharp.Extensions.LanguageServer.Client.Handlers;
@@ -11,8 +12,8 @@ using OmniSharp.Extensions.LanguageServer.Client.Processes;
 using OmniSharp.Extensions.LanguageServer.Client.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
-using OmniSharp.Extensions.LanguageServer.Protocol.Serialization;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
+
 using ISerializer = OmniSharp.Extensions.LanguageServer.Protocol.Serialization.ISerializer;
 using Serializer = OmniSharp.Extensions.LanguageServer.Protocol.Serialization.Serializer;
 
@@ -27,6 +28,16 @@ namespace OmniSharp.Extensions.LanguageServer.Client
     public sealed class LanguageClient
         : IDisposable
     {
+        /// <summary>
+        ///     The CLR <see cref="Type"/> representing the <see cref="LanguageClient"/> class.
+        /// </summary>
+        static readonly Type LanguageClientType = typeof(LanguageClient);
+
+        /// <summary>
+        ///     Sub-clients for various areas of LSP functionality, keyed by client <see cref="Type"/>.
+        /// </summary>
+        readonly ConcurrentDictionary<Type, LspClientBase> _clients = new ConcurrentDictionary<Type, LspClientBase>();
+
         /// <summary>
         ///     The serialiser for notification / request / response bodies.
         /// </summary>
@@ -100,7 +111,7 @@ namespace OmniSharp.Extensions.LanguageServer.Client
         ///     Create a new <see cref="LanguageClient"/>.
         /// </summary>
         /// <param name="loggerFactory">
-        ///     The logger to use.
+        ///     The factory for loggers used by the client and its components.
         /// </param>
         LanguageClient(ILoggerFactory loggerFactory)
         {
@@ -109,9 +120,6 @@ namespace OmniSharp.Extensions.LanguageServer.Client
 
             LoggerFactory = loggerFactory;
             Log = LoggerFactory.CreateLogger<LanguageClient>();
-            Workspace = new WorkspaceClient(this);
-            Window = new WindowClient(this);
-            TextDocument = new TextDocumentClient(this);
 
             _dispatcher = new LspDispatcher(_serializer);
             _dispatcher.RegisterHandler(_dynamicRegistrationHandler);
@@ -132,27 +140,12 @@ namespace OmniSharp.Extensions.LanguageServer.Client
         /// <summary>
         ///     The factory for loggers used by the client and its components.
         /// </summary>
-        ILoggerFactory LoggerFactory { get; }
+        internal ILoggerFactory LoggerFactory { get; }
 
         /// <summary>
         ///     The client's logger.
         /// </summary>
         ILogger Log { get; }
-
-        /// <summary>
-        ///     The LSP Text Document API.
-        /// </summary>
-        public TextDocumentClient TextDocument { get; }
-
-        /// <summary>
-        ///     The LSP Window API.
-        /// </summary>
-        public WindowClient Window { get; }
-
-        /// <summary>
-        ///     The LSP Workspace API.
-        /// </summary>
-        public WorkspaceClient Workspace { get; }
 
         /// <summary>
         ///     The client's capabilities.
@@ -220,6 +213,26 @@ namespace OmniSharp.Extensions.LanguageServer.Client
                     _process?.HasExited ?? Task.CompletedTask
                 );
             }
+        }
+
+        /// <summary>
+        /// Get or create a sub-client of the specified type.
+        /// </summary>
+        /// <typeparam name="TClient">The client type (must have a public constructor taking a single parameter of type <see cref="LanguageClient"/>).</typeparam>
+        /// <returns>The sub-client.</returns>
+        public TClient GetClient<TClient>()
+            where TClient : LspClientBase
+        {
+            Type clientType = typeof(TClient);
+
+            return (TClient) _clients.GetOrAdd(clientType, _ =>
+            {
+                ConstructorInfo constructor = clientType.GetConstructor(new Type[] { LanguageClientType });
+                if (constructor == null)
+                    throw new InvalidOperationException($"Cannot create LSP sub-client of type '{clientType.FullName}' (the class is missing a public constructor that takes a single parameter of type '{LanguageClientType.FullName}').");
+
+                return (LspClientBase)constructor.Invoke(new object[] { this });
+            });
         }
 
         /// <summary>

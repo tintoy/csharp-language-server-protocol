@@ -8,6 +8,7 @@ namespace OmniSharp.Extensions.LanguageServer.Client.Clients
     ///     Client for the LSP Window API.
     /// </summary>
     public class WindowClient
+        : LspClientBase
     {
         /// <summary>
         ///     Create a new <see cref="WindowClient"/>.
@@ -16,17 +17,9 @@ namespace OmniSharp.Extensions.LanguageServer.Client.Clients
         ///     The language client providing the API.
         /// </param>
         public WindowClient(LanguageClient client)
+            : base(client)
         {
-            if (client == null)
-                throw new ArgumentNullException(nameof(client));
-
-            Client = client;
         }
-
-        /// <summary>
-        ///     The language client providing the API.
-        /// </summary>
-        public LanguageClient Client { get; }
 
         /// <summary>
         ///     Register a handler for "window/logMessage" notifications from the server.
