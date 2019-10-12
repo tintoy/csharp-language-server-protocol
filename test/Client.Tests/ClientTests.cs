@@ -232,7 +232,7 @@ namespace OmniSharp.Extensions.LanguageServerProtocol.Client.Tests
                 return Task.FromResult(expectedSignatureHelp);
             });
 
-            var actualSignatureHelp = await LanguageClient.TextDocument.SignatureHelp(AbsoluteDocumentPath, line, column);
+            var actualSignatureHelp = await LanguageClient.TextDocument().SignatureHelp(AbsoluteDocumentPath, line, column);
 
             Assert.Equal(expectedSignatureHelp.ActiveParameter, actualSignatureHelp.ActiveParameter);
             Assert.Equal(expectedSignatureHelp.ActiveSignature, actualSignatureHelp.ActiveSignature);
