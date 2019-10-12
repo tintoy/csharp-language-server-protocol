@@ -49,7 +49,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <summary>
         ///     The queue of outgoing requests.
         /// </summary>
-        readonly BlockingCollection<object> _outgoing = new BlockingCollection<object>(new ConcurrentQueue<object>());
+        readonly BlockingCollection<DapMessage> _outgoing = new BlockingCollection<DapMessage>(new ConcurrentQueue<DapMessage>());
 
         /// <summary>
         ///     The queue of incoming responses.
@@ -75,11 +75,6 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         ///     The output stream.
         /// </summary>
         readonly Stream _output;
-
-        /// <summary>
-        ///     The next available request Id.
-        /// </summary>
-        int _nextRequestId = 0;
 
         /// <summary>
         ///     Has the connection been disposed?
@@ -157,6 +152,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
             // What does client version do? Do we have to negotiate this?
             // The connection may change its Serializer instance once connected; this can be propagated to other components as required.
             Serializer = new DapProtocolSerializer();
+            MessageFactory = new DapMessageFactory(Serializer);
         }
 
         /// <summary>
@@ -188,6 +184,11 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         ///     The JSON serializer used for notification, request, and response payloads.
         /// </summary>
         public DapProtocolSerializer Serializer { get; }
+
+        /// <summary>
+        ///     The factory for <see cref="DapMessage"/>s used by the connection.
+        /// </summary>
+        public DapMessageFactory MessageFactory { get; }
 
         /// <summary>
         ///     Is the connection open?
@@ -307,11 +308,9 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
             if (!IsOpen)
                 throw new DapException("Not connected to the debug adapter.");
 
-            _outgoing.TryAdd(new DapEvent
-            {
-                Id = Interlocked.Increment(ref _nextRequestId),
-                Event = eventType
-            });
+            _outgoing.TryAdd(
+                MessageFactory.Events.Create(eventType)
+            );
         }
 
         /// <summary>
@@ -334,12 +333,9 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
             if (!IsOpen)
                 throw new DapException("Not connected to the debug adapter.");
 
-            _outgoing.TryAdd(new DapEvent
-            {
-                Id = Interlocked.Increment(ref _nextRequestId),
-                Event = eventType,
-                Body = JToken.FromObject(body, Serializer.JsonSerializer)
-            });
+            _outgoing.TryAdd(
+                MessageFactory.Events.Create(eventType, body)
+            );
         }
 
         /// <summary>
@@ -348,8 +344,8 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <param name="command">
         ///     The request command name.
         /// </param>
-        /// <param name="request">
-        ///     The request message.
+        /// <param name="arguments">
+        ///     The request arguments.
         /// </param>
         /// <param name="cancellationToken">
         ///     An optional cancellation token that can be used to cancel the request.
@@ -357,20 +353,18 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <returns>
         ///     A <see cref="Task"/> representing the request.
         /// </returns>
-        public async Task SendRequest(string command, object request, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task SendRequest(string command, object arguments, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(command))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(command)}.", nameof(command));
 
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
-
             if (!IsOpen)
                 throw new DapException("Not connected to the debug adapter.");
 
-            int requestId = Interlocked.Increment(ref _nextRequestId);
+            DapRequest request = MessageFactory.Requests.Create(command, arguments);
 
-            var responseCompletion = new TaskCompletionSource<DapResponse>(state: requestId);
+
+            var responseCompletion = new TaskCompletionSource<DapResponse>(state: request.Id);
             cancellationToken.Register(() =>
             {
                 responseCompletion.TrySetException(
@@ -381,19 +375,14 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 if (!_outgoing.IsAddingCompleted)
                 {
                     _outgoing.TryAdd(
-                        CreateCancellationRequest(requestId)
+                        MessageFactory.Requests.Cancel(request.Id)
                     );
                 }
             });
 
-            _responseCompletions.TryAdd(requestId, responseCompletion);
+            _responseCompletions.TryAdd(request.Id, responseCompletion);
 
-            _outgoing.TryAdd(new DapRequest
-            {
-                Id = requestId,
-                Command = command,
-                Arguments = request != null ? JToken.FromObject(request, Serializer.JsonSerializer) : null
-            });
+            _outgoing.TryAdd(request);
 
             await responseCompletion.Task;
         }
@@ -407,7 +396,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <param name="command">
         ///     The request command name.
         /// </param>
-        /// <param name="request">
+        /// <param name="arguments">
         ///     The request message.
         /// </param>
         /// <param name="cancellationToken">
@@ -416,20 +405,20 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <returns>
         ///     A <see cref="Task{TResult}"/> representing the response.
         /// </returns>
-        public async Task<TResponse> SendRequest<TResponse>(string command, object request, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<TResponse> SendRequest<TResponse>(string command, object arguments, CancellationToken cancellationToken = default)
         {
             if (string.IsNullOrWhiteSpace(command))
                 throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(command)}.", nameof(command));
 
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
+            if (arguments == null)
+                throw new ArgumentNullException(nameof(arguments));
 
             if (!IsOpen)
                 throw new DapException("Not connected to the debug adapter.");
 
-            int requestId = Interlocked.Increment(ref _nextRequestId);
+            DapRequest request = MessageFactory.Requests.Create(command, arguments);
 
-            var responseCompletion = new TaskCompletionSource<DapResponse>(state: requestId);
+            var responseCompletion = new TaskCompletionSource<DapResponse>(state: request.Id);
             cancellationToken.Register(() =>
             {
                 responseCompletion.TrySetException(
@@ -440,19 +429,16 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 if (!_outgoing.IsAddingCompleted)
                 {
                     _outgoing.TryAdd(
-                        CreateCancellationRequest(requestId)
+                        MessageFactory.Requests.Cancel(
+                            requestId: request.Id
+                        )
                     );
                 }
             });
 
-            _responseCompletions.TryAdd(requestId, responseCompletion);
+            _responseCompletions.TryAdd(request.Id, responseCompletion);
 
-            _outgoing.TryAdd(new DapRequest
-            {
-                Id = requestId,
-                Command = command,
-                Arguments = request != null ? JToken.FromObject(request, Serializer.JsonSerializer) : null
-            });
+            _outgoing.TryAdd(request);
 
             DapResponse response = await responseCompletion.Task;
 
@@ -476,7 +462,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
 
             try
             {
-                while (_outgoing.TryTake(out object outgoing, -1, _cancellation))
+                while (_outgoing.TryTake(out DapMessage outgoing, -1, _cancellation))
                 {
                     try
                     {
@@ -917,7 +903,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 Log.LogWarning("Unable to dispatch incoming {RequestCommand} request {RequestId} (no handler registered).", requestMessage.Command, requestMessage.Id);
 
                 _outgoing.TryAdd(
-                    DapErrorResponse.CommandNotFound(requestMessage)
+                    MessageFactory.Responses.Error.CommandNotFound(requestMessage)
                 );
 
                 return;
@@ -935,18 +921,16 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                     Log.LogError(handlerError, "{RequestCommand} request {RequestId} failed (unexpected error raised by handler).", requestMessage.Command, requestMessage.Id);
 
                     _outgoing.TryAdd(
-                        DapErrorResponse.HandlerError(requestMessage, handlerError)
+                        MessageFactory.Responses.Error.HandlerError(requestMessage, handlerError)
                     );
                 }
                 else if (handlerTask.IsCompleted)
                 {
                     Log.LogDebug("{RequestCommand} request {RequestId} complete (Result = {@Result}).", requestMessage.Command, requestMessage.Id, handlerTask.Result);
 
-                    _outgoing.TryAdd(new DapResponse {
-                        RequestId = requestMessage.Id,
-                        Command = requestMessage.Command,
-                        Body = handlerTask.Result != null ? JToken.FromObject(handlerTask.Result, Serializer.JsonSerializer) : null
-                    });
+                    _outgoing.TryAdd(
+                        MessageFactory.Responses.Create(requestMessage, handlerTask.Result)
+                    );
                 }
 
                 _requestCancellations.TryRemove(requestMessage.Id, out CancellationTokenSource cancellation);
@@ -985,7 +969,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 Log.LogWarning("Received invalid request cancellation message {MessageId} (missing 'id' parameter).", requestMessage.Id);
 
                 _outgoing.TryAdd(
-                    DapErrorResponse.InvalidArguments(requestMessage)
+                    MessageFactory.Responses.Error.InvalidArguments(requestMessage)
                 );
             }
         }
@@ -1031,29 +1015,6 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 }
             });
 #pragma warning restore CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
-        }
-
-        /// <summary>
-        ///     Create a <see cref="DapRequest"/> message representing a cancellation request for the specified request Id.
-        /// </summary>
-        /// <param name="requestId">
-        ///     The Id of the request to cancel.
-        /// </param>
-        /// <returns>
-        ///     The new <see cref="DapRequest"/>.
-        /// </returns>
-        DapRequest CreateCancellationRequest(int requestId)
-        {
-            return new DapRequest {
-                Command = "cancel",
-                Arguments = JToken.FromObject(
-                    new DapCancellationArguments
-                    {
-                        RequestId = requestId
-                    },
-                    Serializer.JsonSerializer
-                )
-            };
         }
 
         /// <summary>

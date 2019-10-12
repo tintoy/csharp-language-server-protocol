@@ -53,5 +53,10 @@ namespace OmniSharp.Extensions.DebugAdapter.Client
         ///     Request was cancelled.
         /// </summary>
         public const int ContentModified = -32801;
+
+        /// <summary>
+        ///     Request hander encountered an unexpected error.
+        /// </summary>
+        public const int HandlerError = 500;
     }
 }
