@@ -9,19 +9,19 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
     /// <typeparam name="TEvent">
     ///     The event message type.
     /// </typeparam>
-    public class DelegateNotificationHandler<TEvent>
-        : DelegateHandler, IInvokeNotificationHandler
+    public class DelegateDapEventHandler<TEvent>
+        : DelegateHandler, IInvokeDapEventHandler
     {
         /// <summary>
-        ///     Create a new <see cref="DelegateNotificationHandler{TNotification}"/>.
+        ///     Create a new <see cref="DelegateDapEventHandler{TEvent}"/>.
         /// </summary>
         /// <param name="method">
         ///     The name of the method handled by the handler.
         /// </param>
         /// <param name="handler">
-        ///     The <see cref="NotificationHandler{TNotification}"/> delegate that implements the handler.
+        ///     The <see cref="DapEventHandler{TEvent}"/> delegate that implements the handler.
         /// </param>
-        public DelegateNotificationHandler(string method, NotificationHandler<TEvent> handler)
+        public DelegateDapEventHandler(string method, DapEventHandler<TEvent> handler)
             : base(method)
         {
             if (handler == null)
@@ -31,9 +31,9 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
         }
 
         /// <summary>
-        ///     The <see cref="NotificationHandler{TNotification}"/> delegate that implements the handler.
+        ///     The <see cref="DapEventHandler{TEvent}"/> delegate that implements the handler.
         /// </summary>
-        public NotificationHandler<TEvent> Handler { get; }
+        public DapEventHandler<TEvent> Handler { get; }
 
         /// <summary>
         ///     The expected CLR type of the event payload.

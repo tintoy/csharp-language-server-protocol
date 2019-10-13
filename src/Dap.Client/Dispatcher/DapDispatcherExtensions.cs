@@ -21,12 +21,12 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         ///     The type (name) of the event to handle.
         /// </param>
         /// <param name="handler">
-        ///     A <see cref="NotificationHandler{TNotification}"/> delegate that implements the handler.
+        ///     A <see cref="DapEventHandler{TEvent}"/> delegate that implements the handler.
         /// </param>
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleEvent(this DapDispatcher clientDispatcher, string eventType, NotificationHandler handler)
+        public static IDisposable HandleEvent(this DapDispatcher clientDispatcher, string eventType, DapEventHandler handler)
         {
             if ( clientDispatcher == null )
                 throw new ArgumentNullException(nameof(clientDispatcher));
@@ -38,7 +38,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
                 throw new ArgumentNullException(nameof(handler));
 
             return clientDispatcher.RegisterHandler(
-                new DelegateEmptyNotificationHandler(eventType, handler)
+                new DelegateEmptyDapEventHandler(eventType, handler)
             );
         }
 
@@ -55,12 +55,12 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         ///     The type (name) of the event to handle.
         /// </param>
         /// <param name="handler">
-        ///     A <see cref="NotificationHandler{TNotification}"/> delegate that implements the handler.
+        ///     A <see cref="DapEventHandler{TEvent}"/> delegate that implements the handler.
         /// </param>
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleEvent<TEvent>(this DapDispatcher clientDispatcher, string eventType, NotificationHandler<TEvent> handler)
+        public static IDisposable HandleEvent<TEvent>(this DapDispatcher clientDispatcher, string eventType, DapEventHandler<TEvent> handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
@@ -72,7 +72,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
                 throw new ArgumentNullException(nameof(handler));
 
             return clientDispatcher.RegisterHandler(
-                new DelegateNotificationHandler<TEvent>(eventType, handler)
+                new DelegateDapEventHandler<TEvent>(eventType, handler)
             );
         }
 
@@ -97,7 +97,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleRequest<TRequest, TResponse>(this DapDispatcher clientDispatcher, string method, RequestHandler<TRequest, TResponse> handler)
+        public static IDisposable HandleRequest<TRequest, TResponse>(this DapDispatcher clientDispatcher, string method, DapRequestHandler<TRequest, TResponse> handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));

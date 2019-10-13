@@ -23,12 +23,12 @@ namespace OmniSharp.Extensions.DebugAdapterProtocol.Client.Tests
         }
 
         /// <summary>
-        ///     Verify that <see cref="DelegateEmptyNotificationHandler"/> specifies the correct payload type.
+        ///     Verify that <see cref="DelegateEmptyDapEventHandler"/> specifies the correct payload type.
         /// </summary>
-        [Fact(DisplayName = "DelegateEmptyNotificationHandler specifies correct payload type")]
-        public void DelegateEmptyNotificationHandler_PayloadType()
+        [Fact(DisplayName = "DelegateEmptyDapEventHandler specifies correct payload type")]
+        public void DelegateEmptyDapEventHandler_PayloadType()
         {
-            IHandler handler = new DelegateEmptyNotificationHandler(
+            IHandler handler = new DelegateEmptyDapEventHandler(
                 method: "test",
                 handler: () =>
                 {
@@ -40,12 +40,12 @@ namespace OmniSharp.Extensions.DebugAdapterProtocol.Client.Tests
         }
 
         /// <summary>
-        ///     Verify that <see cref="DelegateNotificationHandler"/> specifies the correct payload type.
+        ///     Verify that <see cref="DelegateDapEventHandler"/> specifies the correct payload type.
         /// </summary>
-        [Fact(DisplayName = "DelegateNotificationHandler specifies correct payload type")]
-        public void DelegateNotificationHandler_PayloadType()
+        [Fact(DisplayName = "DelegateDapEventHandler specifies correct payload type")]
+        public void DelegateDapEventHandler_PayloadType()
         {
-            IHandler handler = new DelegateNotificationHandler<string>(
+            IHandler handler = new DelegateDapEventHandler<string>(
                 method: "test",
                 handler: notification =>
                 {

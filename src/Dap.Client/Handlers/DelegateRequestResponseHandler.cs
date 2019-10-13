@@ -17,7 +17,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
     ///     The response message type.
     /// </typeparam>
     public class DelegateRequestResponseHandler<TRequest, TResponse>
-        : DelegateHandler, IInvokeRequestHandler
+        : DelegateHandler, IInvokeDapRequestHandler
     {
         /// <summary>
         ///     Create a new <see cref="DelegateRequestResponseHandler{TRequest, TResponse}"/>.
@@ -26,9 +26,9 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
         ///     The name of the method handled by the handler.
         /// </param>
         /// <param name="handler">
-        ///     The <see cref="RequestHandler{TRequest, TResponse}"/> delegate that implements the handler.
+        ///     The <see cref="DapRequestHandler{TRequest, TResponse}"/> delegate that implements the handler.
         /// </param>
-        public DelegateRequestResponseHandler(string method, RequestHandler<TRequest, TResponse> handler)
+        public DelegateRequestResponseHandler(string method, DapRequestHandler<TRequest, TResponse> handler)
             : base(method)
         {
             if (handler == null)
@@ -38,9 +38,9 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
         }
 
         /// <summary>
-        ///     The <see cref="RequestHandler{TRequest, TResponse}"/> delegate that implements the handler.
+        ///     The <see cref="DapRequestHandler{TRequest, TResponse}"/> delegate that implements the handler.
         /// </summary>
-        public RequestHandler<TRequest, TResponse> Handler { get; }
+        public DapRequestHandler<TRequest, TResponse> Handler { get; }
 
         /// <summary>
         ///     The expected CLR type of the request payload.

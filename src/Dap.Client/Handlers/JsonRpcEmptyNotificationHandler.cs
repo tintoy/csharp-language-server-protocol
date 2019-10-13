@@ -9,7 +9,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
     ///     An empty notification handler that invokes a JSON-RPC <see cref="IJsonRpcNotificationHandler"/>.
     /// </summary>
     public class JsonRpcEmptyNotificationHandler
-        : JsonRpcHandler, IInvokeEmptyNotificationHandler
+        : JsonRpcHandler, IInvokeDapEmptyEventHandler
     {
         /// <summary>
         ///     Create a new <see cref="JsonRpcEmptyNotificationHandler"/>.

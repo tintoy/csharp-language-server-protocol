@@ -181,7 +181,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         ILogger Log { get; }
 
         /// <summary>
-        ///     The JSON serializer used for notification, request, and response payloads.
+        ///     The JSON serializer used for request, event, and response payloads.
         /// </summary>
         public DapProtocolSerializer Serializer { get; }
 
@@ -295,10 +295,10 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         }
 
         /// <summary>
-        ///     Send an empty notification to the debug adapter.
+        ///     Send an empty event (i.e. no body) to the debug adapter.
         /// </summary>
         /// <param name="eventType">
-        ///     The notification event type.
+        ///     The event type (name).
         /// </param>
         public void SendEvent(string eventType)
         {
@@ -314,10 +314,10 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         }
 
         /// <summary>
-        ///     Send a notification message to the debug adapter.
+        ///     Send an event to the debug adapter.
         /// </summary>
         /// <param name="eventType">
-        ///     The notification command name.
+        ///     The event type (name).
         /// </param>
         /// <param name="body">
         ///     The event message body.
@@ -370,8 +370,8 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                     new OperationCanceledException("The request was canceled via the supplied cancellation token.", cancellationToken)
                 );
 
-                // Send notification telling server to cancel the request, if possible.
-                if (!_outgoing.IsAddingCompleted)
+                // Ask the other end to cancel the request, if possible.
+                if ( !_outgoing.IsAddingCompleted)
                 {
                     _outgoing.TryAdd(
                         MessageFactory.Requests.Cancel(request.Id)
@@ -424,7 +424,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                     new OperationCanceledException("The request was canceled via the supplied cancellation token.", cancellationToken)
                 );
 
-                // Send notification telling server to cancel the request, if possible.
+                // Ask the other end to cancel the request, if possible.
                 if (!_outgoing.IsAddingCompleted)
                 {
                     _outgoing.TryAdd(
@@ -871,7 +871,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                         }
                         case DapEvent @event:
                         {
-                            DispatchNotification(@event);
+                            DispatchEvent(@event);
 
                             break;
                         }
@@ -984,43 +984,43 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         }
 
         /// <summary>
-        ///     Dispatch a notification.
+        ///     Dispatch an event.
         /// </summary>
         /// <param name="eventMessage">
-        ///     The notification message.
+        ///     The event message.
         /// </param>
-        void DispatchNotification(DapEvent eventMessage)
+        void DispatchEvent(DapEvent eventMessage)
         {
             if (eventMessage == null)
                 throw new ArgumentNullException(nameof(eventMessage));
 
-            Log.LogDebug("Dispatching incoming {EventType} notification...", eventMessage.Event);
+            Log.LogDebug("Dispatching incoming {EventType} event...", eventMessage.Event);
 
             Task<bool> handlerTask;
             if (eventMessage.Body != null)
-                handlerTask = _dispatcher.TryHandleNotification(eventMessage.Event, eventMessage.Body);
+                handlerTask = _dispatcher.TryHandleEvent(eventMessage.Event, eventMessage.Body);
             else
-                handlerTask = _dispatcher.TryHandleEmptyNotification(eventMessage.Event);
+                handlerTask = _dispatcher.TryHandleEmptyEvent(eventMessage.Event);
 
 #pragma warning disable CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.
             handlerTask.ContinueWith(completedHandler =>
             {
                 if (handlerTask.IsCanceled)
-                    Log.LogDebug("{EventType} notification canceled.", eventMessage.Event);
+                    Log.LogDebug("{EventType} event canceled.", eventMessage.Event);
                 else if (handlerTask.IsFaulted)
                 {
                     Exception handlerError = handlerTask.Exception.Flatten().InnerExceptions[0];
 
-                    Log.LogError(handlerError, "Failed to dispatch {EventType} notification (unexpected error raised by handler).", eventMessage.Event);
+                    Log.LogError(handlerError, "Failed to dispatch {EventType} event (unexpected error raised by handler).", eventMessage.Event);
                 }
                 else if (handlerTask.IsCompleted)
                 {
-                    Log.LogDebug("{EventType} notification complete.", eventMessage.Event);
+                    Log.LogDebug("{EventType} event handler complete.", eventMessage.Event);
 
                     if (completedHandler.Result)
-                        Log.LogDebug("Dispatched incoming {EventType} notification.", eventMessage.Event);
+                        Log.LogDebug("Dispatched incoming {EventType} event.", eventMessage.Event);
                     else
-                        Log.LogDebug("Ignored incoming {EventType} notification (no handler registered).", eventMessage.Event);
+                        Log.LogDebug("Ignored incoming {EventType} event (no handler registered).", eventMessage.Event);
                 }
             });
 #pragma warning restore CS4014 // Continuation does the work we need; no need to await it as this would tie up the dispatch loop.

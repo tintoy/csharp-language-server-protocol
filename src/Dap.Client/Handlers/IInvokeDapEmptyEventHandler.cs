@@ -1,11 +1,11 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
 {
     /// <summary>
-    ///     Represents a handler for empty notifications.
+    ///     Represents a handler for Debug Adapter events with no body.
     /// </summary>
-    public interface IInvokeEmptyNotificationHandler
+    public interface IInvokeDapEmptyEventHandler
         : IHandler
     {
         /// <summary>

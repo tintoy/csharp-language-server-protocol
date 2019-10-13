@@ -26,7 +26,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleEvent<TEvent>(this DapConnection clientConnection, string eventType, NotificationHandler<TEvent> handler)
+        public static IDisposable HandleEvent<TEvent>(this DapConnection clientConnection, string eventType, DapEventHandler<TEvent> handler)
         {
             if (clientConnection == null)
                 throw new ArgumentNullException(nameof(clientConnection));
@@ -38,7 +38,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 throw new ArgumentNullException(nameof(handler));
 
             return clientConnection.RegisterHandler(
-                new DelegateNotificationHandler<TEvent>(eventType, handler)
+                new DelegateDapEventHandler<TEvent>(eventType, handler)
             );
         }
 
@@ -63,7 +63,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleRequest<TRequest, TResponse>(this DapConnection clientConnection, string method, RequestHandler<TRequest, TResponse> handler)
+        public static IDisposable HandleRequest<TRequest, TResponse>(this DapConnection clientConnection, string method, DapRequestHandler<TRequest, TResponse> handler)
         {
             if (clientConnection == null)
                 throw new ArgumentNullException(nameof(clientConnection));

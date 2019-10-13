@@ -10,7 +10,7 @@ using OmniSharp.Extensions.DebugAdapter.Client.Handlers;
 namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
 {
     /// <summary>
-    ///     Dispatches requests and notifications from a language server to a language client.
+    ///     Dispatches incoming requests and events from a debug adapter to a client.
     /// </summary>
     public class DapDispatcher
     {
@@ -23,7 +23,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         ///     Create a new <see cref="DapDispatcher"/>.
         /// </summary>
         /// <param name="serializer">
-        ///     The JSON serialiser for notification / request / response payloads.
+        ///     The JSON serialiser for event / request / response payloads.
         /// </param>
         public DapDispatcher(ISerializer serializer)
         {
@@ -34,7 +34,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         }
 
         /// <summary>
-        ///     The JSON serialiser to use for notification / request / response payloads.
+        ///     The JSON serialiser to use for event / request / response payloads.
         /// </summary>
         public ISerializer Serializer { get; set; }
 
@@ -63,22 +63,22 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         }
 
         /// <summary>
-        ///     Attempt to handle an empty notification.
+        ///     Attempt to handle an empty event.
         /// </summary>
-        /// <param name="method">
-        ///     The notification method name.
+        /// <param name="eventType">
+        ///     The event type (name).
         /// </param>
         /// <returns>
-        ///     <c>true</c>, if an empty notification handler was registered for specified method; otherwise, <c>false</c>.
+        ///     <c>true</c>, if an empty event handler was registered for specified method; otherwise, <c>false</c>.
         /// </returns>
-        public async Task<bool> TryHandleEmptyNotification(string method)
+        public async Task<bool> TryHandleEmptyEvent(string eventType)
         {
-            if (string.IsNullOrWhiteSpace(method))
-                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+            if (string.IsNullOrWhiteSpace(eventType))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(eventType)}.", nameof(eventType));
 
-            if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeEmptyNotificationHandler emptyNotificationHandler)
+            if (_handlers.TryGetValue(eventType, out IHandler handler) && handler is IInvokeDapEmptyEventHandler emptyEventHandler)
             {
-                await emptyNotificationHandler.Invoke();
+                await emptyEventHandler.Invoke();
 
                 return true;
             }
@@ -87,27 +87,27 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         }
 
         /// <summary>
-        ///     Attempt to handle a notification.
+        ///     Attempt to handle an event.
         /// </summary>
-        /// <param name="method">
-        ///     The notification method name.
+        /// <param name="eventType">
+        ///     The event type (name).
         /// </param>
-        /// <param name="notification">
-        ///     The notification message.
+        /// <param name="body">
+        ///     The event body.
         /// </param>
         /// <returns>
-        ///     <c>true</c>, if a notification handler was registered for specified method; otherwise, <c>false</c>.
+        ///     <c>true</c>, if an event handler was registered for specified method; otherwise, <c>false</c>.
         /// </returns>
-        public async Task<bool> TryHandleNotification(string method, JToken notification)
+        public async Task<bool> TryHandleEvent(string eventType, JToken body)
         {
-            if (string.IsNullOrWhiteSpace(method))
-                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+            if (string.IsNullOrWhiteSpace(eventType))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(eventType)}.", nameof(eventType));
 
-            if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeNotificationHandler notificationHandler)
+            if (_handlers.TryGetValue(eventType, out IHandler handler) && handler is IInvokeDapEventHandler eventHandler)
             {
-                object notificationPayload = DeserializePayload(notificationHandler.PayloadType, notification);
+                object eventPayload = DeserializePayload(eventHandler.PayloadType, body);
 
-                await notificationHandler.Invoke(notificationPayload);
+                await eventHandler.Invoke(eventPayload);
 
                 return true;
             }
@@ -118,11 +118,11 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         /// <summary>
         ///     Attempt to handle a request.
         /// </summary>
-        /// <param name="method">
-        ///     The request method name.
+        /// <param name="command">
+        ///     The request command name.
         /// </param>
-        /// <param name="request">
-        ///     The request message.
+        /// <param name="arguments">
+        ///     The request arguments.
         /// </param>
         /// <param name="cancellationToken">
         ///     A <see cref="CancellationToken"/> that can be used to cancel the operation.
@@ -130,14 +130,14 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         /// <returns>
         ///     If a registered handler was found, a <see cref="Task"/> representing the operation; otherwise, <c>null</c>.
         /// </returns>
-        public Task<object> TryHandleRequest(string method, JToken request, CancellationToken cancellationToken)
+        public Task<object> TryHandleRequest(string command, JToken arguments, CancellationToken cancellationToken)
         {
-            if (string.IsNullOrWhiteSpace(method))
-                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+            if (string.IsNullOrWhiteSpace(command))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(command)}.", nameof(command));
 
-            if (_handlers.TryGetValue(method, out IHandler handler) && handler is IInvokeRequestHandler requestHandler)
+            if (_handlers.TryGetValue(command, out IHandler handler) && handler is IInvokeDapRequestHandler requestHandler)
             {
-                object requestPayload = DeserializePayload(requestHandler.PayloadType, request);
+                object requestPayload = DeserializePayload(requestHandler.PayloadType, arguments);
 
                 return requestHandler.Invoke(requestPayload, cancellationToken);
             }
@@ -146,7 +146,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         }
 
         /// <summary>
-        ///     Deserialise a notification / request payload from JSON.
+        ///     Deserialise an event / request payload from JSON.
         /// </summary>
         /// <param name="payloadType">
         ///     The payload's CLR type.

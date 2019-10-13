@@ -15,7 +15,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
     /// <typeparam name="TNotification">
     ///     The notification message handler.
     /// </typeparam>
-    public class JsonRpcNotificationHandler<TNotification> : JsonRpcHandler, IInvokeNotificationHandler
+    public class JsonRpcNotificationHandler<TNotification> : JsonRpcHandler, IInvokeDapEventHandler
         where TNotification : IRequest
     {
         /// <summary>
