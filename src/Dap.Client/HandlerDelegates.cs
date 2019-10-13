@@ -6,6 +6,14 @@ namespace OmniSharp.Extensions.DebugAdapter.Client
     /// <summary>
     ///     A handler for notifications.
     /// </summary>
+    /// <param name="notification">
+    ///     The notification message.
+    /// </param>
+    public delegate void NotificationHandler();
+
+    /// <summary>
+    ///     A handler for notifications.
+    /// </summary>
     /// <typeparam name="TNotification">
     ///     The notification message type.
     /// </typeparam>

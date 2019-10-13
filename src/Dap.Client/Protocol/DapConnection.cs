@@ -363,7 +363,6 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
 
             DapRequest request = MessageFactory.Requests.Create(command, arguments);
 
-
             var responseCompletion = new TaskCompletionSource<DapResponse>(state: request.Id);
             cancellationToken.Register(() =>
             {
@@ -475,6 +474,16 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                                 await SendMessage(request);
 
                                 Log.LogDebug("Sent outgoing {RequestCommand} request {RequestId}.", request.Command, request.Id);
+
+                                break;
+                            }
+                            case DapResponse response:
+                            {
+                                Log.LogDebug("Sending outgoing {ResponseCommand} response {ResponseId} (for request {RequestId})...", response.Command, response.RequestId, response.Id);
+
+                                await SendMessage(response);
+
+                                Log.LogDebug("Sent outgoing {ResponseCommand} response {ResponseId} (for request {RequestId}).", response.Command, response.RequestId, response.Id);
 
                                 break;
                             }

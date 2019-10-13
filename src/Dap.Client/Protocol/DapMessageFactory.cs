@@ -228,7 +228,8 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 Id = MessageFactory.NextId(),
                 RequestId = request.Id,
                 Command = request.Command,
-                Body = body != null ? JToken.FromObject(body, MessageFactory.Serializer.JsonSerializer) : null
+                Body = body != null ? JToken.FromObject(body, MessageFactory.Serializer.JsonSerializer) : null,
+                Success = true
             };
         }
     }
@@ -342,7 +343,8 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Protocol
                 Message = errorMessage,
                 Body = new JObject(
                     new JProperty("code", errorCode)
-                )
+                ),
+                Success = false
             };
 
             if ( configureBody != null )

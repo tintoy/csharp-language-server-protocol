@@ -1,4 +1,5 @@
-﻿Microsoft Visual Studio Solution File, Format Version 12.00
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 16
 VisualStudioVersion = 16.0.29025.244
 MinimumVisualStudioVersion = 10.0.40219.1
@@ -50,11 +51,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		cake.config = cake.config
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dap.Protocol", "src\Dap.Protocol\Dap.Protocol.csproj", "{F2C9D555-118E-442B-A953-9A7B58A53F33}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dap.Protocol", "src\Dap.Protocol\Dap.Protocol.csproj", "{F2C9D555-118E-442B-A953-9A7B58A53F33}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Dap.Server", "src\Dap.Server\Dap.Server.csproj", "{E1A9123B-A236-4240-8C82-A61BD85C3BF4}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dap.Server", "src\Dap.Server\Dap.Server.csproj", "{E1A9123B-A236-4240-8C82-A61BD85C3BF4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Client.Dap", "src\Client.Dap\Client.Dap.csproj", "{707991B5-B4BB-4FD7-A79C-39DDF8F73A9E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dap.Client", "src\Dap.Client\Dap.Client.csproj", "{707991B5-B4BB-4FD7-A79C-39DDF8F73A9E}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Dap.Client.Tests", "test\Dap.Client.Tests\Dap.Client.Tests.csproj", "{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -198,6 +201,18 @@ Global
 		{707991B5-B4BB-4FD7-A79C-39DDF8F73A9E}.Release|x64.Build.0 = Release|Any CPU
 		{707991B5-B4BB-4FD7-A79C-39DDF8F73A9E}.Release|x86.ActiveCfg = Release|Any CPU
 		{707991B5-B4BB-4FD7-A79C-39DDF8F73A9E}.Release|x86.Build.0 = Release|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Debug|x64.Build.0 = Debug|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Debug|x86.Build.0 = Debug|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Release|x64.ActiveCfg = Release|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Release|x64.Build.0 = Release|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Release|x86.ActiveCfg = Release|Any CPU
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -214,6 +229,7 @@ Global
 		{F2C9D555-118E-442B-A953-9A7B58A53F33} = {D764E024-3D3F-4112-B932-2DB722A1BACC}
 		{E1A9123B-A236-4240-8C82-A61BD85C3BF4} = {D764E024-3D3F-4112-B932-2DB722A1BACC}
 		{707991B5-B4BB-4FD7-A79C-39DDF8F73A9E} = {D764E024-3D3F-4112-B932-2DB722A1BACC}
+		{0A036083-7C2E-4DD4-A4E1-876A5D0EBA3B} = {2F323ED5-EBF8-45E1-B9D3-C014561B3DDA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D38DD0EC-D095-4BCD-B8AF-2D788AF3B9AE}

@@ -9,16 +9,16 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
     public static class DapDispatcherExtensions
     {
         /// <summary>
-        ///     Register a handler for notifications.
+        ///     Register a handler for events that have no body.
         /// </summary>
-        /// <typeparam name="TNotification">
-        ///     The notification message type.
+        /// <typeparam name="TEvent">
+        ///     The event body type.
         /// </typeparam>
         /// <param name="clientDispatcher">
         ///     The <see cref="DapDispatcher"/>.
         /// </param>
-        /// <param name="method">
-        ///     The name of the notification method to handle.
+        /// <param name="eventType">
+        ///     The type (name) of the event to handle.
         /// </param>
         /// <param name="handler">
         ///     A <see cref="NotificationHandler{TNotification}"/> delegate that implements the handler.
@@ -26,19 +26,53 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Dispatcher
         /// <returns>
         ///     An <see cref="IDisposable"/> representing the registration.
         /// </returns>
-        public static IDisposable HandleNotification<TNotification>(this DapDispatcher clientDispatcher, string method, NotificationHandler<TNotification> handler)
+        public static IDisposable HandleEvent(this DapDispatcher clientDispatcher, string eventType, NotificationHandler handler)
+        {
+            if ( clientDispatcher == null )
+                throw new ArgumentNullException(nameof(clientDispatcher));
+
+            if ( string.IsNullOrWhiteSpace(eventType) )
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(eventType)}.", nameof(eventType));
+
+            if ( handler == null )
+                throw new ArgumentNullException(nameof(handler));
+
+            return clientDispatcher.RegisterHandler(
+                new DelegateEmptyNotificationHandler(eventType, handler)
+            );
+        }
+
+        /// <summary>
+        ///     Register a handler for events.
+        /// </summary>
+        /// <typeparam name="TEvent">
+        ///     The event body type.
+        /// </typeparam>
+        /// <param name="clientDispatcher">
+        ///     The <see cref="DapDispatcher"/>.
+        /// </param>
+        /// <param name="eventType">
+        ///     The type (name) of the event to handle.
+        /// </param>
+        /// <param name="handler">
+        ///     A <see cref="NotificationHandler{TNotification}"/> delegate that implements the handler.
+        /// </param>
+        /// <returns>
+        ///     An <see cref="IDisposable"/> representing the registration.
+        /// </returns>
+        public static IDisposable HandleEvent<TEvent>(this DapDispatcher clientDispatcher, string eventType, NotificationHandler<TEvent> handler)
         {
             if (clientDispatcher == null)
                 throw new ArgumentNullException(nameof(clientDispatcher));
 
-            if (string.IsNullOrWhiteSpace(method))
-                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(method)}.", nameof(method));
+            if (string.IsNullOrWhiteSpace(eventType))
+                throw new ArgumentException($"Argument cannot be null, empty, or entirely composed of whitespace: {nameof(eventType)}.", nameof(eventType));
 
             if (handler == null)
                 throw new ArgumentNullException(nameof(handler));
 
             return clientDispatcher.RegisterHandler(
-                new DelegateNotificationHandler<TNotification>(method, handler)
+                new DelegateNotificationHandler<TEvent>(eventType, handler)
             );
         }
 

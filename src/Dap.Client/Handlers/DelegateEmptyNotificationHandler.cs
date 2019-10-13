@@ -18,7 +18,7 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
         /// <param name="handler">
         ///     The <see cref="NotificationHandler"/> delegate that implements the handler.
         /// </param>
-        public DelegateEmptyNotificationHandler(string method, Action handler)
+        public DelegateEmptyNotificationHandler(string method, NotificationHandler handler)
             : base(method)
         {
             if (handler == null)
@@ -28,9 +28,9 @@ namespace OmniSharp.Extensions.DebugAdapter.Client.Handlers
         }
 
         /// <summary>
-        ///     The <see cref="Action"/> delegate that implements the handler.
+        ///     The <see cref="NotificationHandler"/> delegate that implements the handler.
         /// </summary>
-        public Action Handler { get; }
+        public NotificationHandler Handler { get; }
 
         /// <summary>
         ///     The expected CLR type of the notification payload (<c>null</c>, since the handler does not use the request payload).
